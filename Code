@@ -1,0 +1,93 @@
+// THE CODE 
+
+library(caTools) 
+library(class) 
+library(e1071) 
+library(rpart) 
+library(neuralnet) 
+library(ggplot2) 
+data<-read.csv(file.choose())
+View(data)
+data1<-data[,c(1:3,5:7)]
+a = data1
+View(data1)
+d2<-function(x){((x- min(x))/(max(x)-min(x)))}
+d3<-as.data.frame(lapply(data1,d2))
+View(d3)
+d3$perimeter_mean <- ifelse(a$perimeter_mean <= 70, "Low",
+                            ifelse(a$perimeter_mean <= 105, "Medium", "High"))
+d3$perimeter_mean <- as.factor(d3$perimeter_mean)
+View(d3)
+set.seed(123)
+split_d<-sample.split(d3,SplitRatio = 0.70)
+split_d_train<-subset(d3,split_d=="TRUE")
+split_d_test<-subset(d3,split_d=="FALSE")
+View(split_d_train)
+View(split_d_test)
+f1<- function(cm) {
+  accuracy <- sum(diag(cm)) / sum(cm) * 100
+  precision <- diag(cm) / rowSums(cm) * 100
+  recall <- diag(cm) / colSums(cm) * 100
+  f1_score <- 2 * (precision * recall) / (precision + recall)
+  error_rate <- 100 - accuracy
+  list(accuracy = accuracy, 
+       precision = mean(precision, na.rm = TRUE), 
+       recall = mean(recall, na.rm = TRUE), 
+       f1_score = mean(f1_score, na.rm = TRUE), 
+       error_rate = error_rate)
+}
+
+#KNN
+y_pred<-knn(split_d_train[,c(1:2,4:6)],split_d_test[,c(1:2,4:6)],split_d_train[,c(3)],5)
+cm<-table(y_pred,split_d_test[,3])
+knn1<-f1(cm)
+knn1
+
+#Naive_Bayes
+nb<-naiveBayes(perimeter_mean~.,split_d_train)
+y_pred1<-predict(nb,split_d_test)
+cm1<-table(y_pred1,split_d_test$perimeter_mean)
+nb1<-f1(cm1)
+nb1
+
+#Decision_Tree
+dt<-rpart(perimeter_mean~.,split_d_train,method = "class")
+y_pred2 <- predict(dt, split_d_test, type = "class")
+cm2<-table(y_pred2,split_d_test$perimeter_mean)
+dt1<-f1(cm2)
+dt1
+
+#Neural_Network
+nn<-neuralnet(perimeter_mean~.,split_d_train)
+y_pred3<-predict(nn,split_d_test)
+aa<-apply(y_pred3,1,which.max)
+cm3<-table(aa,split_d_test$perimeter_mean)
+nn1<-f1(cm3)
+nn1
+
+results <- data.frame(
+  Model = c("KNN", "Naive Bayes", "Decision Tree", "Neural Network"),
+  Accuracy = c(knn1$accuracy,nb1$accuracy,dt1$accuracy,nn1$accuracy),
+  Precision = c(knn1$precision,nb1$precision,dt1$precision,nn1$precision),
+  Recall = c(knn1$recall,nb1$recall,dt1$recall,nn1$recall),
+  F1_Score = c(knn1$f1_score,nb1$f1_score,dt1$f1_score,nn1$f1_score),
+  Error_Rate = c(knn1$error_rate,nb1$error_rate,dt1$error_rate,nn1$error_rate)
+)
+
+plot_pie_chart <- function(results, x) {
+  ggplot(results, aes(x = "", y = .data[[x]], fill = Model)) +
+    geom_bar(stat = "identity", width = 1) +
+    coord_polar("y") +
+    geom_text(aes(label = paste0(Model, ": ", round(.data[[x]], 1), "%")), 
+              position = position_stack(vjust = 0.5), color = "black") +
+    labs(title = paste("Model Comparison -", x), y = "", x = "") +
+    theme_void() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+
+plot_pie_chart(results, "Accuracy")
+plot_pie_chart(results, "Precision")
+plot_pie_chart(results, "Recall")
+plot_pie_chart(results, "F1_Score")
+plot_pie_chart(results, "Error_Rate")
+
