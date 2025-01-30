@@ -1,4 +1,4 @@
-# R-project
+# Predictive Analysis
 Machine Learning Project: Comparative Analysis of Classification Algorithms
 
 During my 5th semester in BTech, I undertook a project to evaluate the effectiveness of four prominent machine learning algorithms: K-Nearest Neighbors (KNN), Naive Bayes, Decision Tree, and Neural Network. The objective was to identify the optimal model for a classification problem by comparing their performance across key metrics including accuracy, precision, recall, F1 score, and error rate.
